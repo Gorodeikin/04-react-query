@@ -1,5 +1,5 @@
-import { useState } from "react";
-import toast from "react-hot-toast";
+import { useState, useEffect } from "react";
+import { Toaster, toast } from "react-hot-toast";
 import { useQuery } from "@tanstack/react-query";
 import ReactPaginate from "react-paginate";
 
@@ -19,13 +19,12 @@ export default function App() {
   const [page, setPage] = useState(1);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-const { data, isLoading, isError } = useQuery<TMDBResponse>({
-  queryKey: ["movies", query, page],
-  queryFn: () => fetchMovies(query, page),
-  enabled: !!query,
-  placeholderData: (prev) => prev,
-});
-
+  const { data, isLoading, isError, isSuccess } = useQuery<TMDBResponse>({
+    queryKey: ["movies", query, page],
+    queryFn: () => fetchMovies(query, page),
+    enabled: !!query,
+    placeholderData: (prev) => prev,
+  });
 
   const movies = data?.results ?? [];
   const totalPages = data?.total_pages ?? 0;
@@ -39,8 +38,18 @@ const { data, isLoading, isError } = useQuery<TMDBResponse>({
     setPage(1);
   };
 
+  useEffect(() => {
+    if (isSuccess && movies.length === 0) {
+      toast("No movies found for your query.", {
+        icon: "🎬",
+      });
+    }
+  }, [isSuccess, movies.length]);
+
   return (
     <div className={css.app}>
+      <Toaster position="top-right" reverseOrder={false} />
+
       <SearchBar onSubmit={handleSearch} />
 
       {isLoading && <Loader />}
@@ -67,8 +76,12 @@ const { data, isLoading, isError } = useQuery<TMDBResponse>({
       )}
 
       {selectedMovie && (
-        <MovieModal movie={selectedMovie} onClose={() => setSelectedMovie(null)} />
+        <MovieModal
+          movie={selectedMovie}
+          onClose={() => setSelectedMovie(null)}
+        />
       )}
     </div>
   );
 }
+
